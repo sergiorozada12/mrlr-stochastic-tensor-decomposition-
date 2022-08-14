@@ -29,8 +29,9 @@ error = np.linalg.norm(data - data_hat)
 #print(error)
 
 data_hat_custom = Parafac(data, 10).optimize(100, 1e-12)
-print(np.linalg.norm(data_hat_custom - data_hat))
+print(np.linalg.norm(data - data_hat_custom))
+#print(np.linalg.norm(data_hat_custom - data_hat))
 
-data_hat_mrlr = Mrlr(data, ranks=[10, 10], partitions=[[[0], [1], [2]], [[1], [0, 2]]]).optimize(100, 1e-8)
+data_hat_mrlr = Mrlr(data, ranks=[10, 10], partitions=[[[0], [1], [2]], [[1], [0, 2]]]).optimize(max_iter=100, tol=1e-12)
 print(np.linalg.norm(data - data_hat_mrlr))
 

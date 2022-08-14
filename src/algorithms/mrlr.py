@@ -30,11 +30,10 @@ class Mrlr:
         for i in range(len(self.partitions)):
             partition = self.partitions[i]
             rank = self.ranks[i]
-
             tensorizer = Tensorization(residual)
 
             tensor_unf, tensor_remap = tensorizer.tensor_unfold(partition)
-            tensor_unf_hat = Parafac(tensor_unf, rank).optimize(max_iter, tol)
+            tensor_unf_hat = Parafac(tensor=tensor_unf, rank=rank).optimize(max_iter=max_iter, tol=tol)
             residual_hat = tensorizer.tensor_refold(tensor_unf_hat, tensor_remap)
 
             tensor_approx.append(residual_hat)
