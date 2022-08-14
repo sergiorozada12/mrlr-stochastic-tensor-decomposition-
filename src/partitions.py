@@ -1,11 +1,18 @@
 import itertools
+import random
+from typing import List, Tuple, Dict, Optional
 import numpy as np
 
 class Tensorization:
-    def __init__(self, tensor):
+    def __init__(self, tensor: np.array) -> None:
         self.tensor = tensor
 
-    def _reindex(self, partitions, index):
+    def _reindex(
+        self,
+        partitions: List[List[int]],
+        index: List[int]
+    ) -> List[int]:
+
         new_index = [0]*len(partitions)
         for i in range(len(partitions)):
             partition = partitions[i]
@@ -27,7 +34,11 @@ class Tensorization:
 
         return tuple(new_index)
 
-    def tensor_unfold(self, partitions):
+    def tensor_unfold(
+        self,
+        partitions: List[List[int]]
+    ) -> Tuple[np.array, Dict[List[int], List[int]]]:
+
         generators = [list(range(dimension_shape)) for dimension_shape in self.tensor.shape]
         indices = itertools.product(*generators)
 
@@ -43,8 +54,24 @@ class Tensorization:
             idx_recovery_map[new_idx] = idx
         return new_tensor, idx_recovery_map
 
-    def tensor_refold(self, tensor, recovery_map):
+    def tensor_refold(
+        self,
+        tensor: np.array,
+        recovery_map: Dict[List[int], List[int]]
+    ) -> np.array:
+
         tensor_recovered = np.zeros(self.tensor.shape)
         for idx in recovery_map:
             tensor_recovered[recovery_map[idx]] = tensor[idx]
         return tensor_recovered
+
+
+class Sampler:
+    def __init__(self, shape: Tuple[int]) -> None:
+        self.shape = shape
+
+    def sample_factor(self) -> int:
+        return random.randint(0, len(self.shape) - 1)
+
+    def sample_entry(self) -> List[int]:
+        return [random.randint(0, self.shape[i] - 1) for i in range(len(self.shape))]
