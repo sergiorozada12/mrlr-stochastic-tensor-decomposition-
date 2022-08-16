@@ -1,4 +1,3 @@
-from audioop import reverse
 from typing import List
 
 import numpy as np
@@ -53,29 +52,49 @@ class ParafacStochastic:
     def _get_init_factor(self, nrows: int, ncols: int) -> np.array:
         return np.random.rand(nrows, ncols)
 
+    def _khatri_vector(self, factors: List[np.array], indices: List[int]) -> float:
+        kr = np.ones(self.rank)
+        for mode, factor in enumerate(factors):
+            kr *= factor[indices[mode], :]
+        return sum(kr)
+
+    def _get_direction(self, factors: List[np.array], indices: List[int], dim: int) -> np.array:
+        direction = np.ones(self.rank)
+        for mode, factor in enumerate(factors):
+            if dim == mode:
+                continue
+            direction *= factor[indices[mode], :]
+        return direction
+
     def optimize(
         self,
         max_iter: int,
-        tol: float
+        tol: float,
+        alpha: float
     ) -> List[np.array]:
 
         factors = []
         for dims in self.tensor.shape:
             factors.append(self._get_init_factor(dims, self.rank))
 
-        for _ in range(max_iter):
+        for iteration in range(max_iter):
+            indices = self.sampler.sample_entry()
+
+            val = self.tensor[tuple(indices)]
+            val_hat = self._khatri_vector(factors, indices)
+            error = val - val_hat
+
+            gradient = [np.zeros(factor.shape) for factor in factors]
             for mode in range(len(factors)):
-                mat = unfold(self.tensor, mode).T
-                kr = khatri_rao(factors, skip_matrix=mode)
-                mttkrp = kr.T @ mat
-                factors[mode] = (np.linalg.inv(kr.T @ kr) @ mttkrp).T
+                direction = -self._get_direction(factors, indices, mode)
+                gradient[mode][indices[mode], :] = alpha*error*direction
+            factors = [factors[i] - gradient[i] for i in range(len(factors))]
 
-            weights = np.ones(self.rank)
-            tensor_hat = tl.cp_to_tensor((weights, factors))
-            error = np.linalg.norm(self.tensor - tensor_hat)
+            if iteration % 1_000 == 0:
+                weights = np.ones(self.rank)
+                tensor_hat = tl.cp_to_tensor((weights, factors))
+                error = np.linalg.norm(self.tensor - tensor_hat)
 
-            if error < tol:
-                print(error)
-                return tensor_hat
-        print(error)
+                if error < tol:
+                    return tensor_hat
         return tensor_hat
