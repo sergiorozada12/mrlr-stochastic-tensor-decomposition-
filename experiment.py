@@ -36,5 +36,7 @@ print(np.linalg.norm(data - data_hat_custom))
 #print(np.linalg.norm(data - data_hat_mrlr))
 
 
-data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(10_000_000, 1e-12, 0.00001)
+#data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(10_000_000, 0.00001)
+data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(1_000_000, 0.00001)
+
 print(np.linalg.norm(data - data_hat_custom_stoch))

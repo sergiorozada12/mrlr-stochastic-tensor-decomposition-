@@ -58,18 +58,23 @@ class ParafacStochastic:
             kr *= factor[indices[mode], :]
         return sum(kr)
 
-    def _get_direction(self, factors: List[np.array], indices: List[int], dim: int) -> np.array:
-        direction = np.ones(self.rank)
-        for mode, factor in enumerate(factors):
-            if dim == mode:
-                continue
-            direction *= factor[indices[mode], :]
+    def _get_directions(self, factors: List[np.array], indices: List[int]) -> np.array:
+        direction = np.ones((len(factors), self.rank))
+        prefix_prod = np.ones(self.rank)
+        for idx in range(1, len(factors)):
+            prefix_prod *= factors[idx - 1][indices[idx - 1], :]
+            direction[idx, :] = prefix_prod
+
+        prefix_prod = np.ones(self.rank)
+        for idx in range(len(factors) - 2, -1, -1):
+            prefix_prod *= factors[idx + 1][indices[idx + 1], :]
+            direction[idx, :] *= prefix_prod
+
         return direction
 
     def optimize(
         self,
         max_iter: int,
-        tol: float,
         alpha: float
     ) -> List[np.array]:
 
@@ -77,24 +82,18 @@ class ParafacStochastic:
         for dims in self.tensor.shape:
             factors.append(self._get_init_factor(dims, self.rank))
 
-        for iteration in range(max_iter):
+        for _ in range(max_iter):
             indices = self.sampler.sample_entry()
 
             val = self.tensor[tuple(indices)]
             val_hat = self._khatri_vector(factors, indices)
             error = val - val_hat
 
-            gradient = [np.zeros(factor.shape) for factor in factors]
+            directions = -self._get_directions(factors, indices)
             for mode in range(len(factors)):
-                direction = -self._get_direction(factors, indices, mode)
-                gradient[mode][indices[mode], :] = alpha*error*direction
-            factors = [factors[i] - gradient[i] for i in range(len(factors))]
+                gradient = alpha*error*directions[mode, :]
+                factors[mode][indices[mode]] -= gradient
 
-            if iteration % 1_000 == 0:
-                weights = np.ones(self.rank)
-                tensor_hat = tl.cp_to_tensor((weights, factors))
-                error = np.linalg.norm(self.tensor - tensor_hat)
-
-                if error < tol:
-                    return tensor_hat
+        weights = np.ones(self.rank)
+        tensor_hat = tl.cp_to_tensor((weights, factors))
         return tensor_hat
