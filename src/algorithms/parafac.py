@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import tensorly as tl
@@ -52,25 +52,15 @@ class ParafacStochastic:
     def _get_init_factor(self, nrows: int, ncols: int) -> np.array:
         return np.random.rand(nrows, ncols)
 
-    def _khatri_vector(self, factors: List[np.array], indices: List[int]) -> float:
+    def _khatri_vector(self, factors: List[np.array], indices: List[int]) -> Tuple[np.array, List[np.array]]:
+        vecs = []
         kr = np.ones(self.rank)
         for mode, factor in enumerate(factors):
-            kr *= factor[indices[mode], :]
-        return sum(kr)
+            row = factor[indices[mode], :]
 
-    def _get_directions(self, factors: List[np.array], indices: List[int]) -> np.array:
-        direction = np.ones((len(factors), self.rank))
-        prefix_prod = np.ones(self.rank)
-        for idx in range(1, len(factors)):
-            prefix_prod *= factors[idx - 1][indices[idx - 1], :]
-            direction[idx, :] = prefix_prod
-
-        prefix_prod = np.ones(self.rank)
-        for idx in range(len(factors) - 2, -1, -1):
-            prefix_prod *= factors[idx + 1][indices[idx + 1], :]
-            direction[idx, :] *= prefix_prod
-
-        return direction
+            vecs.append(row)
+            kr *= row
+        return kr, vecs
 
     def optimize(
         self,
@@ -84,14 +74,15 @@ class ParafacStochastic:
 
         for _ in range(max_iter):
             indices = self.sampler.sample_entry()
+            prod, vecs = self._khatri_vector(factors, indices)
 
             val = self.tensor[tuple(indices)]
-            val_hat = self._khatri_vector(factors, indices)
+            val_hat = sum(prod)
             error = val - val_hat
 
-            directions = -self._get_directions(factors, indices)
             for mode in range(len(factors)):
-                gradient = alpha*error*directions[mode, :]
+                direction = -prod/vecs[mode]
+                gradient = alpha*error*direction
                 factors[mode][indices[mode]] -= gradient
 
         weights = np.ones(self.rank)

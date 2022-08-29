@@ -67,11 +67,17 @@ class Tensorization:
 
 
 class Sampler:
-    def __init__(self, shape: Tuple[int]) -> None:
+    def __init__(self, shape: Tuple[int], n_lowres_comp: Optional[int]=None) -> None:
         self.shape = shape
+        self.n_lowres_comp = n_lowres_comp
 
     def sample_factor(self) -> int:
         return random.randint(0, len(self.shape) - 1)
 
     def sample_entry(self) -> List[int]:
         return [random.randint(0, self.shape[i] - 1) for i in range(len(self.shape))]
+
+    def sample_lowres_comp(self) -> int:
+        if not self.n_lowres_comp:
+            return None
+        return random.randint(0, len(self.shape) - 1)
