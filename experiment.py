@@ -6,7 +6,7 @@ from tensorly.decomposition import parafac
 
 from src.partitions import Tensorization, Sampler
 from src.algorithms.parafac import Parafac, ParafacStochastic
-from src.algorithms.mrlr import Mrlr
+from src.algorithms.mrlr import Mrlr, MrlrStochastic
 
 data = scipy.io.loadmat("data/amino.mat")['X']
 tensorizer = Tensorization(data)
@@ -37,6 +37,8 @@ print(np.linalg.norm(data - data_hat_custom))
 
 
 #data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(10_000_000, 0.00001)
-data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(1_000_000, 0.00001)
-
+data_hat_custom_stoch = ParafacStochastic(data, 10).optimize(10_000_000, 0.00001)
 print(np.linalg.norm(data - data_hat_custom_stoch))
+
+data_hat_custom_mrlr_stoch = MrlrStochastic(data, ranks=[10, 10], partitions=[[[0], [1], [2]], [[1], [0, 2]]]).optimize(20_000_000, 0.00001)
+print(np.linalg.norm(data - data_hat_custom_mrlr_stoch))
